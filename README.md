@@ -1,41 +1,119 @@
-# ACO Practice Churn Prediction
+# ACO Patient Churn Prediction
 
-Predicting which healthcare practices will leave an Accountable Care Organization — before they do.
-
-**500 practices · 150K patients · 5-year synthetic dataset · 78% ROC-AUC**
+> Predicting which Medicare patients will leave the network, before they do.
 
 ---
 
-## The Problem
+## The problem
 
-When practices leave ACOs, patient care is disrupted and shared savings targets collapse. By the time a practice signals it's leaving, it's usually too late to act. This project identifies at-risk practices **12 months in advance** so retention teams can intervene early.
-
----
-
-## Approach
-
-Built on a normalized 6-table schema (practices, patients, financials, operations, market context, churn labels) designed to reflect how ACO data actually lives in a warehouse — not a flat CSV.
-
-The pipeline runs end-to-end across ten steps:
-
-1. **Data modeling & synthetic generation** — churn probabilities derived from a logistic function encoding known ACO exit drivers, so the data has realistic, learnable structure
-2. **EDA** — churn rates segmented by practice size, tenure, risk track, and financial performance
-3. **Statistical testing** — t-tests, chi-square, and logistic regression (odds ratios) to confirm which drivers are signal vs. noise
-4. **Survival analysis** — Kaplan-Meier curves showing *when* practices exit, stratified by shared savings status and risk track (log-rank p < 0.05)
-5. **ML modeling** — Logistic Regression, Random Forest, and Gradient Boosting compared; Random Forest selected at 78% AUC, 75% recall, 82% precision
-6. **SHAP interpretability** — practice-level explanations of model predictions for operational use
-7. **K-means segmentation** — four practice archetypes with distinct churn profiles and targeted intervention strategies
-8. **Scenario analysis** — model used as a policy simulator to estimate churn reduction from three interventions
+ACOs lose attributed revenue and quality scores every time a Medicare patient goes inactive, shifts care out-of-network, or stops seeing their assigned PCP. By the time it's obvious, it's too late. This project identifies at-risk patients early enough to intervene.
 
 ---
 
-## Key Findings
-<img width="1440" height="1460" alt="image" src="https://github.com/user-attachments/assets/d7588171-1640-459e-9b73-1e288a70a1b5" />
+## Business impact
 
-- **Benchmark gap is the #1 driver** — practices spending >5% above their CMS benchmark churn at 3× the baseline rate
-- **Downside risk accelerates exit** — two consecutive loss years push 12-month churn probability to ~70%
-- **Small practices are structurally disadvantaged** — churn at 2× the rate of large practices due to resource constraints
-- **Shared savings is the strongest retention lever** — practices earning >$100K/year in savings have ~85% 5-year retention
+```
+1,000 patients analyzed   →   74 flagged as high-risk   →   73 churns preventable
+```
+
+Catching 87.5% of churning patients before they leave means care coordinators can be dispatched while the relationship is still recoverable, protecting attributed revenue and CMS quality scores.
+
+---
+
+## How churn is defined
+
+A patient is marked churned if any of the following is true:
+
+- **6+ months** since last encounter (and has a history of visits)
+- **60%+ of recent care** happened out-of-network
+- **Zero PCP visits** in the last 6 months (with at least 3 recent encounters)
+
+---
+
+## What the data shows
+
+| Signal | Churned patients | Active patients |
+|---|---|---|
+| Days since last visit | **172 days** | 43 days |
+| PCP engagement rate | 44.6% | 52.3% |
+| Out-of-network rate | Higher | Lower |
+| New member (<6 mo) | Over-represented | — |
+
+The gap in recency is the loudest signal. If someone hasn't shown up in six months, the model has already flagged them.
+
+---
+
+## Model performance
+
+Built with Random Forest on 15 behavioral and demographic features.
+
+| Metric | Score |
+|---|---|
+| AUC-ROC | **0.979** |
+| Accuracy | **98.5%** |
+| Recall (churn caught) | **87.5%** |
+| False alarms | 1 of 200 |
+
+AUC of 0.979 means near-perfect separation between patients who will churn and those who won't. For context: 0.5 is random guessing, 1.0 is perfect.
+
+---
+
+## Top predictive features
+
+```
+Recent encounters       ████████████████████████████████████████████  44%
+ACO tenure              ████████                                        9%
+PCP engagement rate     ███████                                         7%
+Primary care ratio      ██████                                          6%
+Out-of-network rate     █████                                           5%
+```
+
+Current engagement level dominates the model. The best predictor of future absence is recent absence.
+
+---
+
+## Risk tiers and action plan
+
+| Tier | Patients | Churn rate | Action |
+|---|---|---|---|
+| 🔴 High risk | **74** | 98.6% | Immediate outreach: assign care coordinator, PCP visit within 2 weeks |
+| 🟡 Medium risk | 7 | 71.4% | Proactive monitoring: preventive care reminders, PCP touchpoint within 60 days |
+| 🟢 Low risk | 911 | 0.2% | Standard wellness programs, quarterly monitoring |
+
+---
+
+## Technical approach
+
+- **Data:** 1,000 synthetic Medicare patients, 10,000+ encounters over 3 years (ages 65–95, 68% with chronic conditions)
+- **Platform:** PySpark on Databricks for feature engineering at scale, scikit-learn for modeling
+- **Features engineered:** in-network utilization rate, PCP engagement rate, care fragmentation index, recent vs. historical encounter patterns, new member flag
+- **Model:** Random Forest (100 estimators, max depth 10, stratified 80/20 split)
+
+---
+
+## Roadmap
+
+**Now**
+- Score all 1,000 patients, surface top 74 to care coordination team
+- Assign dedicated coordinators, schedule wellness visits within 2 weeks
+
+**Next quarter**
+- Build PCP onboarding program targeting new members (<6 months)
+- Reduce out-of-network leakage with proactive referral management
+
+**6–12 months**
+- Automate monthly scoring pipeline in Databricks
+- Build operational dashboard for care managers
+- A/B test intervention strategies, track ROI on prevented churns
+
+---
+
+## Files
+
+```
+ACO_Patient_Churn_Prediction.ipynb   # Full analysis: data generation, EDA, modeling, risk tiers
+README.md                            # This file
+```
 
 ---
 
