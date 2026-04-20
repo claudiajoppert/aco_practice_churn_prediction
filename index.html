@@ -3,413 +3,776 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ACO Practice Churn Prediction — Healthcare Data Science Project</title>
-<meta name="description" content="An end-to-end machine learning project predicting which medical practices will leave Medicare ACOs — and what interventions can stop it.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<title>ACO Patient Churn Prediction · Claudia Joppert</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  :root{
-    --bg:#ffffff;--bg2:#f7f6f2;--bg3:#f0efe9;
-    --text:#1a1a18;--text2:#5f5e5a;--text3:#888780;
-    --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.06);
-    --blue:#185FA5;--blue-light:#E6F1FB;--blue-mid:#378ADD;
-    --green:#3B6D11;--green-light:#EAF3DE;
-    --red:#A32D2D;--red-light:#FCEBEB;
-    --amber:#BA7517;--amber-light:#FAEEDA;
-    --radius:8px;--radius-lg:12px;
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --ink: #1A1916;
+    --ink-muted: #6B6860;
+    --ink-faint: #B8B5AE;
+    --green: #1D9E75;
+    --green-light: #E1F5EE;
+    --amber: #BA7517;
+    --amber-light: #FAEEDA;
+    --red: #C0392B;
+    --red-light: #FCEBEB;
+    --border: rgba(26,25,22,0.1);
+    --serif: 'DM Serif Display', Georgia, serif;
+    --sans: 'DM Sans', system-ui, sans-serif;
+    --mono: 'DM Mono', monospace;
   }
-  @media(prefers-color-scheme:dark){
-    :root{
-      --bg:#1c1c1a;--bg2:#242422;--bg3:#2c2c2a;
-      --text:#e8e7e1;--text2:#b4b2a9;--text3:#888780;
-      --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.06);
-      --blue:#85B7EB;--blue-light:#0C447C;--blue-mid:#378ADD;
-      --green:#97C459;--green-light:#173404;
-      --red:#F09595;--red-light:#501313;
-      --amber:#EF9F27;--amber-light:#412402;
-    }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    font-weight: 300;
   }
-  html{scroll-behavior:smooth}
-  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+
+  a { color: var(--green); text-decoration: none; }
+  a:hover { text-decoration: underline; }
 
   /* NAV */
-  nav{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:0.5px solid var(--border);padding:0 2rem}
-  .nav-inner{max-width:900px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:52px}
-  .nav-logo{font-size:13px;font-weight:500;color:var(--text2)}
-  .nav-links{display:flex;gap:1.5rem}
-  .nav-links a{font-size:13px;color:var(--text3);text-decoration:none;transition:color .2s}
-  .nav-links a:hover{color:var(--text)}
-  .nav-btn{font-size:12px;font-weight:500;padding:6px 14px;border:0.5px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text);cursor:pointer;text-decoration:none;transition:background .2s}
-  .nav-btn:hover{background:var(--bg2)}
-
-  /* LAYOUT */
-  .page{max-width:900px;margin:0 auto;padding:0 2rem 6rem}
+  nav {
+    padding: 1.25rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .nav-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink-muted);
+    letter-spacing: 0.05em;
+  }
+  .nav-links { display: flex; gap: 1.5rem; }
+  .nav-links a {
+    font-size: 13px;
+    color: var(--ink-muted);
+    font-weight: 400;
+  }
+  .nav-links a:hover { color: var(--ink); text-decoration: none; }
 
   /* HERO */
-  .hero{padding:5rem 0 3rem;border-bottom:0.5px solid var(--border);margin-bottom:3rem}
-  .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem}
-  h1{font-family:'DM Serif Display',serif;font-size:44px;font-weight:400;line-height:1.15;color:var(--text);margin-bottom:1rem;max-width:700px}
-  .hero-sub{font-size:17px;color:var(--text2);line-height:1.7;max-width:580px;margin-bottom:2rem}
-  .meta-row{display:flex;gap:2.5rem;flex-wrap:wrap}
-  .meta-item{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
-  .meta-item span{display:block;font-size:14px;color:var(--text);font-weight:500;margin-top:3px;text-transform:none;letter-spacing:0}
+  .hero {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 5rem 2rem 3.5rem;
+  }
+  .hero-tag {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    color: var(--green);
+    text-transform: uppercase;
+    margin-bottom: 1.25rem;
+  }
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    line-height: 1.15;
+    font-weight: 400;
+    margin-bottom: 1.5rem;
+    color: var(--ink);
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--green);
+  }
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--ink-muted);
+    max-width: 560px;
+    line-height: 1.8;
+    margin-bottom: 2.5rem;
+  }
+  .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.6rem 1.25rem;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; text-decoration: none; }
+  .btn-primary { background: var(--ink); color: #fff; }
+  .btn-secondary { background: transparent; border-color: var(--border); color: var(--ink); }
 
-  /* KPI STRIP */
-  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:2.5rem 0}
-  .kpi{background:var(--bg2);border-radius:var(--radius);padding:1.25rem 1rem;text-align:center}
-  .kpi-val{font-family:'DM Serif Display',serif;font-size:32px;line-height:1}
-  .kpi-label{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5}
-  .c-blue{color:var(--blue-mid)}
-  .c-red{color:var(--red)}
-  .c-green{color:var(--green)}
+  /* METRICS ROW */
+  .metrics {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 2rem 4rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .metric {
+    background: var(--surface);
+    padding: 1.5rem;
+  }
+  .metric-num {
+    font-family: var(--serif);
+    font-size: 2.4rem;
+    font-weight: 400;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+  .metric-num.green { color: var(--green); }
+  .metric-label {
+    font-size: 12px;
+    color: var(--ink-muted);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
 
-  /* SECTION */
-  .section{margin:4rem 0}
-  .section-label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:.5rem}
-  h2{font-family:'DM Serif Display',serif;font-size:26px;font-weight:400;color:var(--text);margin-bottom:1rem}
-  p.body{font-size:15px;color:var(--text2);line-height:1.8;margin-bottom:1rem}
-  hr{border:none;border-top:0.5px solid var(--border);margin:3.5rem 0}
+  /* CONTENT SECTIONS */
+  .content {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
 
-  /* CALLOUT */
-  .callout{background:var(--bg2);border-left:3px solid var(--blue-mid);padding:1rem 1.25rem;border-radius:0 var(--radius) var(--radius) 0;margin:1.5rem 0}
-  .callout-title{font-size:10px;font-weight:500;color:var(--blue);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
-  .callout p{font-size:14px;color:var(--text2);line-height:1.7;margin:0}
+  section { margin-bottom: 5rem; }
 
-  /* CHARTS */
-  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin:1.5rem 0;align-items:start}
-  .chart-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px}
-  .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--text3);margin:8px 0}
-  .ld{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:middle}
+  .section-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+  h2 {
+    font-family: var(--serif);
+    font-size: 1.9rem;
+    font-weight: 400;
+    margin-bottom: 1.25rem;
+    color: var(--ink);
+    line-height: 1.25;
+  }
+  p { color: var(--ink-muted); margin-bottom: 1rem; font-weight: 300; }
 
-  /* FEATURE IMPORTANCE */
-  .finding{display:grid;grid-template-columns:32px 1fr 90px;gap:12px;align-items:center;padding:12px 0;border-bottom:0.5px solid var(--border2)}
-  .finding:last-child{border-bottom:none}
-  .f-num{font-family:'DM Serif Display',serif;font-size:20px;color:var(--text3);text-align:center}
-  .f-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:2px}
-  .f-desc{font-size:12px;color:var(--text3);line-height:1.5}
-  .f-bar-bg{background:var(--bg3);border-radius:3px;height:6px;width:100%}
-  .f-bar-fill{background:var(--blue-mid);border-radius:3px;height:6px}
+  /* SIGNAL CARDS */
+  .signals {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+  .signal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+  .signal-card.red-card { border-left: 3px solid var(--red); }
+  .signal-card.green-card { border-left: 3px solid var(--green); }
+  .signal-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+  .signal-label.red { color: var(--red); }
+  .signal-label.green { color: var(--green); }
+  .signal-val {
+    font-family: var(--serif);
+    font-size: 1.8rem;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+  .signal-desc { font-size: 13px; color: var(--ink-muted); margin: 0; }
 
-  /* MODEL TABLE */
-  table{width:100%;border-collapse:collapse;font-size:13px;margin:1.25rem 0}
-  th{font-size:10px;font-weight:500;text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border);text-transform:uppercase;letter-spacing:.07em;color:var(--text3)}
-  td{padding:10px 10px;border-bottom:0.5px solid var(--border2);color:var(--text2)}
-  .best-row{background:var(--bg2)}
-  .best-row td{color:var(--text)}
-  .badge{font-size:10px;font-weight:500;padding:2px 7px;border-radius:8px;display:inline-block;margin-left:6px}
-  .badge-green{background:var(--green-light);color:var(--green)}
-  .badge-red{background:var(--red-light);color:var(--red)}
-  .badge-amber{background:var(--amber-light);color:var(--amber)}
+  /* CHART CONTAINERS */
+  .chart-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.75rem;
+    margin: 2rem 0;
+  }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 0.25rem;
+  }
+  .chart-sub {
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin-bottom: 1.5rem;
+  }
+  .chart-canvas-wrap { position: relative; width: 100%; }
 
-  /* SEGMENTS */
-  .seg-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:1.5rem 0}
-  .seg-card{border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem}
-  .seg-risk{font-size:10px;font-weight:500;padding:3px 8px;border-radius:8px;display:inline-block;margin-bottom:8px}
-  .seg-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px}
-  .seg-churn{font-family:'DM Serif Display',serif;font-size:28px;margin-bottom:6px}
-  .seg-detail{font-size:12px;color:var(--text3);line-height:1.6}
+  /* FEATURE BAR */
+  .feature-bars { margin: 1.5rem 0; }
+  .fbar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 0.75rem;
+  }
+  .fbar-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-muted);
+    width: 180px;
+    flex-shrink: 0;
+  }
+  .fbar-track {
+    flex: 1;
+    height: 6px;
+    background: #eee;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .fbar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--green);
+  }
+  .fbar-pct {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-muted);
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+  }
 
-  /* SCENARIOS */
-  .sc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:1.5rem 0}
-  .sc-card{border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;text-align:center}
-  .sc-val{font-family:'DM Serif Display',serif;font-size:30px;margin-bottom:6px}
-  .sc-label{font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px}
-  .sc-desc{font-size:12px;color:var(--text3);line-height:1.6}
+  /* RISK TIERS */
+  .risk-tiers { display: grid; gap: 1rem; margin: 2rem 0; }
+  .tier {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 1.25rem;
+  }
+  .tier-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .tier-info {}
+  .tier-name {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .tier-action { font-size: 13px; color: var(--ink-muted); margin: 0; }
+  .tier-stat {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .tier-count {
+    font-family: var(--serif);
+    font-size: 1.4rem;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .tier-rate { font-size: 12px; color: var(--ink-faint); }
 
-  /* RECS */
-  .rec-list{list-style:none;margin:1rem 0}
-  .rec-item{display:flex;gap:14px;padding:14px 0;border-bottom:0.5px solid var(--border2)}
-  .rec-item:last-child{border-bottom:none}
-  .rec-n{font-family:'DM Serif Display',serif;font-size:22px;color:var(--blue);min-width:28px}
-  .rec-text{font-size:14px;color:var(--text2);line-height:1.7}
+  /* PIPELINE */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 2rem 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .pipe-step {
+    flex: 1;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    border-right: 1px solid var(--border);
+    position: relative;
+  }
+  .pipe-step:last-child { border-right: none; }
+  .pipe-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+  }
+  .pipe-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .pipe-detail { font-size: 12px; color: var(--ink-muted); }
 
-  /* CITATIONS */
-  .cit-item{padding:10px 0;border-bottom:0.5px solid var(--border2);font-size:13px;color:var(--text2);line-height:1.65}
-  .cit-item:last-child{border-bottom:none}
-  .cit-n{font-weight:500;color:var(--text);margin-right:6px}
-  a{color:var(--blue);text-decoration:none}
-  a:hover{text-decoration:underline}
+  /* STACK */
+  .stack-pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 1.5rem 0; }
+  .pill {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+    background: var(--surface);
+  }
 
   /* FOOTER */
-  footer{background:var(--bg2);border-top:0.5px solid var(--border);padding:2rem;text-align:center;font-size:13px;color:var(--text3);margin-top:4rem}
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-faint);
+    font-family: var(--mono);
+  }
 
-  @media(max-width:640px){
-    h1{font-size:28px}
-    .kpi-grid{grid-template-columns:repeat(2,1fr)}
-    .two-col,.seg-grid,.sc-grid{grid-template-columns:1fr}
-    nav .nav-links{display:none}
-    .hero{padding:3rem 0 2rem}
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .hero { animation: fadeUp 0.6s ease both; }
+  .metrics { animation: fadeUp 0.6s 0.1s ease both; }
+  section { animation: fadeUp 0.6s 0.2s ease both; }
+
+  @media (max-width: 600px) {
+    .pipeline { flex-direction: column; }
+    .pipe-step { border-right: none; border-bottom: 1px solid var(--border); }
+    .pipe-step:last-child { border-bottom: none; }
+    .tier { grid-template-columns: auto 1fr; }
+    .tier-stat { display: none; }
   }
 </style>
 </head>
 <body>
 
 <nav>
-  <div class="nav-inner">
-    <span class="nav-logo">ACO Churn Prediction</span>
-    <div class="nav-links">
-      <a href="#findings">Findings</a>
-      <a href="#model">Model</a>
-      <a href="#segments">Segments</a>
-      <a href="#scenarios">Scenarios</a>
-      <a href="#citations">Citations</a>
-    </div>
-    <a class="nav-btn" href="https://github.com" target="_blank">View Code on GitHub →</a>
+  <span class="nav-name">claudia joppert / portfolio</span>
+  <div class="nav-links">
+    <a href="https://github.com/claudiajoppert">GitHub</a>
+    <a href="mailto:ccjoppert@gmail.com">Contact</a>
   </div>
 </nav>
 
-<div class="page">
-
-  <div class="hero">
-    <div class="eyebrow">Healthcare Data Science · End-to-End ML Project</div>
-    <h1>Why Doctors Leave ACOs — and How Machine Learning Can Stop It</h1>
-    <p class="hero-sub">An end-to-end machine learning project predicting which medical practices are about to leave Medicare's Accountable Care Program — and quantifying what interventions can keep them in.</p>
-    <div class="meta-row">
-      <div class="meta-item">Dataset<span>500 practices · 5 years · 176K patients</span></div>
-      <div class="meta-item">Stack<span>PySpark · scikit-learn · SHAP · Databricks</span></div>
-      <div class="meta-item">Best Model<span>Logistic Regression · AUC 0.90</span></div>
-      <div class="meta-item">Period<span>2021 – 2025 (simulated)</span></div>
-    </div>
+<div class="hero">
+  <div class="hero-tag">Healthcare analytics · Databricks · Random Forest</div>
+  <h1>Predicting Medicare patient churn <em>before</em> it happens</h1>
+  <p class="hero-sub">ACOs lose attributed revenue and quality scores when patients go inactive, shift care out-of-network, or stop seeing their assigned PCP. By the time it shows up in reporting, the window to act has closed. This project scores patients monthly so care coordinators can reach out while the relationship is still recoverable.</p>
+  <div class="hero-actions">
+    <a href="https://github.com/claudiajoppert/aco-churn" class="btn btn-primary">View notebook</a>
+    <a href="#findings" class="btn btn-secondary">See findings</a>
   </div>
+</div>
 
-  <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-val c-red">64.5%</div><div class="kpi-label">Simulated annual churn rate across 500 practices</div></div>
-    <div class="kpi"><div class="kpi-val c-blue">0.90</div><div class="kpi-label">ROC-AUC — model's ability to tell churners from stayers</div></div>
-    <div class="kpi"><div class="kpi-val">87%</div><div class="kpi-label">Of at-risk practices correctly identified before exit</div></div>
-    <div class="kpi"><div class="kpi-val c-green">−30%</div><div class="kpi-label">Predicted churn reduction with a 2% benchmark improvement</div></div>
+<div class="metrics">
+  <div class="metric">
+    <div class="metric-num green">0.979</div>
+    <div class="metric-label">AUC-ROC</div>
   </div>
-
-  <div class="section">
-    <div class="section-label">Background</div>
-    <h2>What's an ACO, and why does churn matter?</h2>
-    <p class="body">An Accountable Care Organization (ACO) is a group of doctors, hospitals, and clinics that voluntarily team up to deliver coordinated care to Medicare patients. When they keep patients healthy and spending below a government-set target (called a "benchmark"), they earn shared savings. When they overspend, they face penalties.</p>
-    <p class="body">The Medicare Shared Savings Program now covers over 10 million beneficiaries across 480 ACOs and set a record $2.4 billion in savings for Medicare in 2024. But keeping practices in the program is a persistent challenge — when a practice leaves, the ACO loses attributed patients, disrupts care coordination, and jeopardizes its cost targets.</p>
-    <div class="callout">
-      <div class="callout-title">Real-world context</div>
-      <p>A 2025 study in <em>Health Affairs Scholar</em> found clinicians in the MSSP had a 16% annual exit rate, with the average clinician staying just 3.6 years. Only 23% of clinicians who joined before 2013 were still in the program 9 years later. <sup>[1]</sup></p>
-    </div>
-    <p class="body">This project builds a machine learning system to flag practices likely to leave — before they do — giving ACO leadership time to intervene.</p>
+  <div class="metric">
+    <div class="metric-num">98.5%</div>
+    <div class="metric-label">Accuracy</div>
   </div>
-
-  <hr>
-
-  <div class="section">
-    <div class="section-label">The Data</div>
-    <h2>What we modeled</h2>
-    <p class="body">Six interconnected data tables capture the full picture of an ACO practice: financial performance, patient risk profiles, operational capabilities, and regional market dynamics. Because real ACO data is protected health information, a realistic synthetic dataset was generated using known ACO churn dynamics from peer-reviewed literature.</p>
-
-    <div class="two-col">
-      <div>
-        <div class="chart-title">Practice breakdown (500 total)</div>
-        <div style="position:relative;height:180px"><canvas id="pieSize" role="img" aria-label="Pie chart: small 50%, medium 31%, large 19%">Small 50%, Medium 31%, Large 19%</canvas></div>
-        <div class="legend"><span><span class="ld" style="background:#185FA5"></span>Small (250)</span><span><span class="ld" style="background:#378ADD"></span>Medium (154)</span><span><span class="ld" style="background:#B5D4F4"></span>Large (96)</span></div>
-      </div>
-      <div>
-        <div class="chart-title">Risk track split</div>
-        <div style="position:relative;height:180px"><canvas id="pieRisk" role="img" aria-label="Pie chart: upside-only 60%, downside risk 40%">Upside-only 60%, Downside risk 40%</canvas></div>
-        <div class="legend"><span><span class="ld" style="background:#3B6D11"></span>Upside-only (299)</span><span><span class="ld" style="background:#E24B4A"></span>Downside risk (201)</span></div>
-      </div>
-    </div>
-
-    <p class="body">176,066 patients were simulated across 500 practices, with an average risk score of 1.13 (Medicare average = 1.0) and 2.1 chronic conditions per patient — reflecting a realistic Medicare population profile.</p>
+  <div class="metric">
+    <div class="metric-num">87.5%</div>
+    <div class="metric-label">Churn recall</div>
   </div>
-
-  <hr>
-
-  <div class="section" id="findings">
-    <div class="section-label">Exploratory Analysis</div>
-    <h2>Who churns — and why?</h2>
-    <p class="body">Before building any model, we examined churn rates across key segments. The patterns are striking and consistent with the ACO research literature.</p>
-
-    <div class="chart-title" style="margin-bottom:8px">Churn rate by segment</div>
-    <div class="legend"><span><span class="ld" style="background:#E24B4A"></span>Churn rate (%)</span></div>
-    <div style="position:relative;height:260px"><canvas id="segBar" role="img" aria-label="Bar chart of churn rates by segment">Small 70%, Medium 60%, Large 52%, Downside risk 74.5%, Upside-only 57.9%</canvas></div>
-
-    <div class="callout" style="margin-top:1.5rem">
-      <div class="callout-title">Research backing</div>
-      <p>When CMS introduced the "Pathways to Success" rule requiring downside risk, more ACOs exited the MSSP than joined — for the first time in program history. <sup>[3]</sup> A separate study found nearly two-thirds of small rural ACOs exited when required to assume downside risk. <sup>[4]</sup></p>
-    </div>
-
-    <p class="body">A t-test confirmed the financial gap is statistically significant: practices that churned had benchmark gaps averaging +7.7% vs −1.2% for retained practices — nearly a 9-point difference (p &lt; 0.001).</p>
+  <div class="metric">
+    <div class="metric-num">73</div>
+    <div class="metric-label">Churns preventable</div>
   </div>
+</div>
 
-  <hr>
+<div class="content">
 
-  <div class="section">
-    <div class="section-label">Key Findings</div>
-    <h2>Top predictors of churn</h2>
-    <p class="body">Random Forest feature importance and SHAP analysis agreed on the ranking. Financial factors dominate — but operational gaps matter too.</p>
+  <!-- PROBLEM -->
+  <section id="findings">
+    <div class="section-tag">01 / The problem</div>
+    <h2>What separates churned patients from active ones</h2>
+    <p>Across 1,000 synthetic Medicare patients with 10,000+ encounters, three signals predict churn reliably. The gap in visit recency alone is striking.</p>
 
-    <div class="finding"><div class="f-num">1</div><div><div class="f-name">Benchmark gap</div><div class="f-desc">Spending more than the government's target is the single biggest red flag. Practices over 5% above benchmark face extreme churn risk.</div></div><div><div class="f-bar-bg"><div class="f-bar-fill" style="width:100%"></div></div></div></div>
-    <div class="finding"><div class="f-num">2</div><div><div class="f-name">Shared savings</div><div class="f-desc">Practices earning savings stay. Financial reward is the strongest retention lever available to ACO leadership.</div></div><div><div class="f-bar-bg"><div class="f-bar-fill" style="width:40%"></div></div></div></div>
-    <div class="finding"><div class="f-num">3</div><div><div class="f-name">Net financial result</div><div class="f-desc">The real "take-home" from the ACO model — shared savings minus any penalties paid back to CMS.</div></div><div><div class="f-bar-bg"><div class="f-bar-fill" style="width:39%"></div></div></div></div>
-    <div class="finding"><div class="f-num">4</div><div><div class="f-name">Staff ratio</div><div class="f-desc">Practices with fewer support staff per provider struggle to coordinate care and manage complex, high-cost patients.</div></div><div><div class="f-bar-bg"><div class="f-bar-fill" style="width:37%"></div></div></div></div>
-    <div class="finding"><div class="f-num">5</div><div><div class="f-name">Cost trend</div><div class="f-desc">Rising year-over-year costs signal incoming financial distress — an early warning before losses officially hit.</div></div><div><div class="f-bar-bg"><div class="f-bar-fill" style="width:36%"></div></div></div></div>
-    <div class="finding"><div class="f-num">6</div><div><div class="f-name">EHR capability score</div><div class="f-desc">Practices with weak EHR systems can't track quality metrics or identify high-risk patients before they escalate to costly care.</div></div><div><div class="f-bar-bg"><div class="f-bar-fill" style="width:33%"></div></div></div></div>
-    <div class="finding"><div class="f-num">7</div><div><div class="f-name">Years in ACO</div><div class="f-desc">Newer practices churn most. Those with more than 5 years in the program are significantly more stable and invested.</div></div><div><div class="f-bar-bg"><div class="f-bar-fill" style="width:22%"></div></div></div></div>
-  </div>
-
-  <hr>
-
-  <div class="section" id="model">
-    <div class="section-label">Machine Learning</div>
-    <h2>How the models performed</h2>
-    <p class="body">Three models were trained: Logistic Regression, Random Forest, and Gradient Boosting. All performed well — logistic regression edged out the others on ROC-AUC, which measures how well the model separates at-risk practices from stable ones.</p>
-
-    <table>
-      <thead><tr><th>Model</th><th>ROC-AUC</th><th>Avg Precision</th><th>Accuracy</th><th>Recall</th></tr></thead>
-      <tbody>
-        <tr class="best-row"><td>Logistic Regression <span class="badge badge-green">Best</span></td><td>0.905</td><td>0.936</td><td>82%</td><td>87.2%</td></tr>
-        <tr><td>Gradient Boosting</td><td>0.893</td><td>0.936</td><td>—</td><td>—</td></tr>
-        <tr><td>Random Forest</td><td>0.891</td><td>0.923</td><td>—</td><td>—</td></tr>
-      </tbody>
-    </table>
-
-    <div class="chart-title" style="margin:1.5rem 0 8px">ROC curves — all three models</div>
-    <div style="position:relative;height:300px"><canvas id="rocChart" role="img" aria-label="ROC curves for all three models showing AUC values near 0.90">Logistic Regression AUC 0.905, Gradient Boosting 0.893, Random Forest 0.891</canvas></div>
-
-    <p class="body" style="margin-top:1rem">An ROC-AUC of 0.90 is considered excellent. In plain terms: if you randomly pick one practice that will churn and one that won't, the model correctly identifies which is which 90% of the time. Out of 258 churners in the test set, the model flagged 225 correctly — giving the ACO team time to act.</p>
-
-    <div class="callout">
-      <div class="callout-title">Survival analysis</div>
-      <p>Kaplan-Meier survival curves confirmed that practices earning shared savings retained significantly better over time. A log-rank test showed the difference is statistically significant (p &lt; 0.0001). Practices on downside risk tracks also showed materially worse retention curves.</p>
-    </div>
-  </div>
-
-  <hr>
-
-  <div class="section" id="segments">
-    <div class="section-label">Practice Segments</div>
-    <h2>Four types of practices — four different problems</h2>
-    <p class="body">K-means clustering (k=4) identified four distinct practice archetypes. Each needs a different intervention strategy.</p>
-
-    <div class="seg-grid">
-      <div class="seg-card">
-        <div class="seg-risk badge-red" style="background:var(--red-light);color:var(--red)">High risk</div>
-        <div class="seg-name">Financially Struggling</div>
-        <div class="seg-churn" style="color:var(--red)">80.1%</div>
-        <div class="seg-detail">74 practices · benchmark gap +8.2% · avg loss $178K/yr<br><br>Need immediate financial intervention and care management support. Some candidates for ACO mergers.</div>
+    <div class="signals">
+      <div class="signal-card red-card">
+        <div class="signal-label red">Churned patients</div>
+        <div class="signal-val">172</div>
+        <div class="signal-desc">avg days since last visit</div>
       </div>
-      <div class="seg-card">
-        <div class="seg-risk badge-red" style="background:var(--red-light);color:var(--red)">High risk</div>
-        <div class="seg-name">Large but Overspending</div>
-        <div class="seg-churn" style="color:var(--red)">87.0%</div>
-        <div class="seg-detail">167 practices · benchmark gap +8.7% · smaller individual losses<br><br>Bigger practices with structural cost problems. Benchmark advocacy and population health investments needed.</div>
+      <div class="signal-card green-card">
+        <div class="signal-label green">Active patients</div>
+        <div class="signal-val">43</div>
+        <div class="signal-desc">avg days since last visit</div>
       </div>
-      <div class="seg-card">
-        <div class="seg-risk badge-amber" style="background:var(--amber-light);color:var(--amber)">Moderate risk</div>
-        <div class="seg-name">Mixed Performance</div>
-        <div class="seg-churn" style="color:var(--amber)">60.3%</div>
-        <div class="seg-detail">124 practices · near break-even · gap +1.2%<br><br>On the fence. Targeted coaching and early warning triggers can tip these toward retention.</div>
+      <div class="signal-card red-card">
+        <div class="signal-label red">PCP engagement</div>
+        <div class="signal-val">44.6%</div>
+        <div class="signal-desc">churned patients, vs 52.3% active</div>
       </div>
-      <div class="seg-card">
-        <div class="seg-risk badge-green" style="background:var(--green-light);color:var(--green)">Lower risk</div>
-        <div class="seg-name">Strong Performers</div>
-        <div class="seg-churn" style="color:var(--green)">32.2%</div>
-        <div class="seg-detail">135 practices · avg savings $69K · gap +0.4%<br><br>Anchor practices. Invest in retaining them — peer mentorship roles, leadership, early contract renewal.</div>
-      </div>
-    </div>
-  </div>
-
-  <hr>
-
-  <div class="section" id="scenarios">
-    <div class="section-label">Scenario Analysis</div>
-    <h2>What if we changed something?</h2>
-    <p class="body">Three policy interventions were simulated through the trained model to estimate their impact on churn. The results show which levers actually have leverage.</p>
-
-    <div class="sc-grid">
-      <div class="sc-card">
-        <div class="sc-val" style="color:var(--green)">−19.6pp</div>
-        <div class="sc-label">Benchmark +2%</div>
-        <div class="sc-desc">Retains ~391 practices · 30.3% relative improvement. The single highest-impact intervention. Advocating with CMS for favorable benchmark recalibration has massive ROI.</div>
-      </div>
-      <div class="sc-card">
-        <div class="sc-val" style="color:var(--blue)">−5.3pp</div>
-        <div class="sc-label">Boost shared savings +20%</div>
-        <div class="sc-desc">Retains ~106 practices · 8.2% relative improvement. Achievable through care coordination and population health programs. Good ROI, but not a silver bullet alone.</div>
-      </div>
-      <div class="sc-card">
-        <div class="sc-val" style="color:var(--red)">+4.2pp</div>
-        <div class="sc-label">Eliminate downside risk</div>
-        <div class="sc-desc">Actually increases churn in simulation. Removing penalties without fixing underlying cost issues doesn't help — practices need financial wins, not just risk removal.</div>
+      <div class="signal-card red-card">
+        <div class="signal-label red">New member risk</div>
+        <div class="signal-val">&lt;6 mo</div>
+        <div class="signal-desc">the highest-risk window, due to a missed onboarding gap</div>
       </div>
     </div>
 
-    <div class="chart-title" style="margin:1.5rem 0 8px">Scenario impact on churn rate (baseline: 64.5%)</div>
-    <div style="position:relative;height:240px"><canvas id="scenarioBar" role="img" aria-label="Scenario impact chart. Benchmark +2% reduces churn by 19.6pp. Savings +20% reduces by 5.3pp. Removing downside risk increases churn by 4.2pp.">Scenario results</canvas></div>
-  </div>
+    <p>Churn is defined as: 6+ months inactive, OR 60%+ of recent care out-of-network, OR zero PCP visits in the last 6 months. The overall churn rate is 8% (80 of 1,000 patients). The patterns are consistent enough across the population to catch reliably.</p>
+  </section>
 
-  <hr>
+  <!-- MODEL -->
+  <section>
+    <div class="section-tag">02 / The model</div>
+    <h2>Random Forest on 15 behavioral features</h2>
+    <p>Feature engineering in PySpark on Databricks, modeling in scikit-learn. Recent encounter volume is the top predictor, accounting for nearly half the model's explanatory power.</p>
 
-  <div class="section">
-    <div class="section-label">Recommendations</div>
-    <h2>What should ACO leadership actually do?</h2>
-    <ul class="rec-list">
-      <li class="rec-item"><div class="rec-n">1</div><div class="rec-text">Deploy the model in production (via MLflow or Unity Catalog) to score every practice monthly. Flag any practice with predicted churn probability above 60% for proactive outreach — before they've decided to leave.</div></li>
-      <li class="rec-item"><div class="rec-n">2</div><div class="rec-text">Advocate with CMS for benchmark recalibration — particularly for practices serving high-risk patient populations. This is the single highest-impact lever. Even a 2% improvement could retain nearly 400 practices annually.</div></li>
-      <li class="rec-item"><div class="rec-n">3</div><div class="rec-text">Invest upfront in small practice infrastructure: care coordination staff, EHR upgrades, and population health analytics. New practices churn most — and respond best to early support.</div></li>
-      <li class="rec-item"><div class="rec-n">4</div><div class="rec-text">Tailor interventions by segment. Struggling practices need financial rescue. Mixed-performance practices need coaching. Strong performers need recognition and contract incentives to stay.</div></li>
-      <li class="rec-item"><div class="rec-n">5</div><div class="rec-text">Track leading indicators monthly: benchmark gap trends, cost trend direction, and the share of practices earning positive shared savings. Don't wait for year-end reconciliation to discover a practice is in trouble.</div></li>
-    </ul>
-  </div>
+    <div class="feature-bars">
+      <div class="fbar-row">
+        <span class="fbar-label">recent_encounters</span>
+        <div class="fbar-track"><div class="fbar-fill" style="width:88%"></div></div>
+        <span class="fbar-pct">44%</span>
+      </div>
+      <div class="fbar-row">
+        <span class="fbar-label">tenure_years</span>
+        <div class="fbar-track"><div class="fbar-fill" style="width:18%;opacity:0.7"></div></div>
+        <span class="fbar-pct">9%</span>
+      </div>
+      <div class="fbar-row">
+        <span class="fbar-label">pcp_engagement_rate</span>
+        <div class="fbar-track"><div class="fbar-fill" style="width:14%;opacity:0.6"></div></div>
+        <span class="fbar-pct">7%</span>
+      </div>
+      <div class="fbar-row">
+        <span class="fbar-label">primary_care_ratio</span>
+        <div class="fbar-track"><div class="fbar-fill" style="width:12%;opacity:0.5"></div></div>
+        <span class="fbar-pct">6%</span>
+      </div>
+      <div class="fbar-row">
+        <span class="fbar-label">out_of_network_rate</span>
+        <div class="fbar-track"><div class="fbar-fill" style="width:10%;opacity:0.4"></div></div>
+        <span class="fbar-pct">5%</span>
+      </div>
+      <div class="fbar-row">
+        <span class="fbar-label">care_fragmentation</span>
+        <div class="fbar-track"><div class="fbar-fill" style="width:8%;opacity:0.35"></div></div>
+        <span class="fbar-pct">4%</span>
+      </div>
+      <div class="fbar-row">
+        <span class="fbar-label">distance_to_pcp_miles</span>
+        <div class="fbar-track"><div class="fbar-fill" style="width:6%;opacity:0.3"></div></div>
+        <span class="fbar-pct">3%</span>
+      </div>
+    </div>
 
-  <hr>
+    <div class="chart-wrap">
+      <div class="chart-title">ROC curve · churn prediction</div>
+      <div class="chart-sub">AUC 0.979 · Random Forest · 200 test patients</div>
+      <div class="chart-canvas-wrap" style="height:260px">
+        <canvas id="rocChart" role="img" aria-label="ROC curve showing AUC of 0.979, the line hugs the top-left corner indicating excellent model performance">Model achieves AUC of 0.979.</canvas>
+      </div>
+    </div>
 
-  <div class="section" id="citations">
-    <div class="section-label">References</div>
-    <h2>Citations</h2>
-    <div class="cit-item"><span class="cit-n">[1]</span>Markovitz, A.A., et al. (2025). Participation and attrition in the Medicare Shared Savings Program. <em>Health Affairs Scholar</em>, 3(4). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11992558/" target="_blank">pmc.ncbi.nlm.nih.gov</a></div>
-    <div class="cit-item"><span class="cit-n">[2]</span>Centers for Medicare & Medicaid Services. (2025). MSSP performance year 2024 financial and quality results. <a href="https://www.cms.gov/medicare/payment/fee-for-service-providers/shared-savings-program-ssp-acos" target="_blank">cms.gov</a></div>
-    <div class="cit-item"><span class="cit-n">[3]</span>Smith, et al. (2024). Factors affecting ACOs' decisions to remain in or exit the MSSP following Pathways to Success. <em>PMC</em>. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10830425/" target="_blank">pmc.ncbi.nlm.nih.gov</a></div>
-    <div class="cit-item"><span class="cit-n">[4]</span>McConnell, K.J., et al. (2022). ACO Investment Model produced savings, but the majority of participants exited when faced with downside risk. <em>Health Affairs</em>. <a href="https://www.healthaffairs.org/doi/10.1377/hlthaff.2020.01819" target="_blank">healthaffairs.org</a></div>
-    <div class="cit-item"><span class="cit-n">[5]</span>Peck, K.A., et al. (2019). ACO contracts with downside financial risk growing, but still in the minority. <em>Health Affairs</em>, 38(7). <a href="https://pubmed.ncbi.nlm.nih.gov/31260361/" target="_blank">pubmed.ncbi.nlm.nih.gov</a></div>
-    <div class="cit-item"><span class="cit-n">[6]</span>Congressional Budget Office. (2024). Medicare accountable care organizations: Past performance and future directions. <a href="https://www.cbo.gov/publication/60213" target="_blank">cbo.gov</a></div>
-    <div class="cit-item"><span class="cit-n">[7]</span>Nyweide, D.J. (2025). The first decade of ACO model evaluations in the Medicare program: A systematic review. <em>Medical Care Research and Review</em>. <a href="https://journals.sagepub.com/doi/10.1177/10775587251325914" target="_blank">sagepub.com</a></div>
-    <div class="cit-item"><span class="cit-n">[8]</span>Advisory Board. (2025). ACOs saved Medicare $2.4B in 2024, new CMS data shows. <a href="https://www.advisory.com/daily-briefing/2025/09/09/aco-savings" target="_blank">advisory.com</a></div>
-  </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Risk score distribution</div>
+      <div class="chart-sub">Separation between active and churned patients</div>
+      <div class="chart-canvas-wrap" style="height:220px">
+        <canvas id="distChart" role="img" aria-label="Histogram showing active patients clustered near 0 risk score, churned patients clustered near 1.0">Active patients cluster near 0, churned near 1.0.</canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- RISK TIERS -->
+  <section>
+    <div class="section-tag">03 / Action plan</div>
+    <h2>Three tiers, three responses</h2>
+    <p>Score all ACO members monthly. The 74 high-risk patients account for nearly all preventable churn, so that's where care coordinator capacity goes first.</p>
+
+    <div class="risk-tiers">
+      <div class="tier">
+        <div class="tier-dot" style="background:#C0392B"></div>
+        <div class="tier-info">
+          <div class="tier-name">High risk</div>
+          <p class="tier-action">Immediate outreach: assign care coordinator, PCP visit within 2 weeks, address access barriers</p>
+        </div>
+        <div class="tier-stat">
+          <div class="tier-count">74</div>
+          <div class="tier-rate">98.6% churn rate</div>
+        </div>
+      </div>
+      <div class="tier">
+        <div class="tier-dot" style="background:#BA7517"></div>
+        <div class="tier-info">
+          <div class="tier-name">Medium risk</div>
+          <p class="tier-action">Proactive monitoring: preventive care reminders, PCP touchpoint within 60 days</p>
+        </div>
+        <div class="tier-stat">
+          <div class="tier-count">7</div>
+          <div class="tier-rate">71.4% churn rate</div>
+        </div>
+      </div>
+      <div class="tier">
+        <div class="tier-dot" style="background:#1D9E75"></div>
+        <div class="tier-info">
+          <div class="tier-name">Low risk</div>
+          <p class="tier-action">Standard wellness programs, quarterly monitoring for escalation</p>
+        </div>
+        <div class="tier-stat">
+          <div class="tier-count">911</div>
+          <div class="tier-rate">0.2% churn rate</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Patient segmentation by risk tier</div>
+      <div class="chart-sub">Total patients vs. actual churned per tier</div>
+      <div class="chart-canvas-wrap" style="height:240px">
+        <canvas id="tierChart" role="img" aria-label="Grouped bar chart: Low risk 911 patients 2 churned, Medium risk 7 patients 5 churned, High risk 74 patients 73 churned">Risk tier distribution: most churn concentrated in high-risk tier.</canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- PIPELINE -->
+  <section>
+    <div class="section-tag">04 / Technical approach</div>
+    <h2>End-to-end pipeline</h2>
+    <p>Built to run on Databricks at scale, using the same architecture common in production ACO analytics environments.</p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pipe-num">01</div>
+        <div class="pipe-name">Data generation</div>
+        <div class="pipe-detail">1,000 patients · 10,000+ encounters · 3 years</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">02</div>
+        <div class="pipe-name">Feature engineering</div>
+        <div class="pipe-detail">PySpark · in-network rate · PCP engagement · fragmentation</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">03</div>
+        <div class="pipe-name">Modeling</div>
+        <div class="pipe-detail">Random Forest · 100 estimators · stratified split</div>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">04</div>
+        <div class="pipe-name">Risk scoring</div>
+        <div class="pipe-detail">Probability scores → 3 tiers → action plan</div>
+      </div>
+    </div>
+
+    <div class="stack-pills">
+      <span class="pill">Python</span>
+      <span class="pill">PySpark</span>
+      <span class="pill">Databricks</span>
+      <span class="pill">scikit-learn</span>
+      <span class="pill">pandas</span>
+      <span class="pill">matplotlib</span>
+      <span class="pill">seaborn</span>
+      <span class="pill">Random Forest</span>
+    </div>
+  </section>
+
+  <!-- NEXT STEPS -->
+  <section>
+    <div class="section-tag">05 / Roadmap</div>
+    <h2>From model to production</h2>
+    <p><strong style="font-weight:500;color:var(--ink)">Now:</strong> Score all patients, flag top 74, assign care coordinators, schedule wellness visits within 2 weeks.</p>
+    <p><strong style="font-weight:500;color:var(--ink)">Next quarter:</strong> Build a PCP onboarding program targeting new members (under 6 months), reduce out-of-network leakage with proactive referral management.</p>
+    <p><strong style="font-weight:500;color:var(--ink)">6 to 12 months:</strong> Automate monthly scoring pipeline, build an operational dashboard for care managers, A/B test intervention strategies, track ROI on prevented churns.</p>
+  </section>
 
 </div>
 
 <footer>
-  Built with Python · PySpark · scikit-learn · SHAP · Databricks &nbsp;|&nbsp; Synthetic data generated for portfolio demonstration &nbsp;|&nbsp; <a href="https://github.com" target="_blank">View full code on GitHub</a>
+  claudia joppert · san diego, ca · ccjoppert@gmail.com · <a href="https://github.com/claudiajoppert">github.com/claudiajoppert</a>
 </footer>
 
 <script>
-const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-const tickColor = isDark ? '#888780' : '#888780';
-Chart.defaults.font.family = "'DM Sans', sans-serif";
-Chart.defaults.color = tickColor;
+const INK = '#1A1916';
+const INK_MUTED = '#6B6860';
+const GREEN = '#1D9E75';
+const RED = '#C0392B';
+const AMBER = '#BA7517';
+const BORDER = 'rgba(26,25,22,0.1)';
 
-new Chart(document.getElementById('pieSize'),{type:'pie',data:{labels:['Small','Medium','Large'],datasets:[{data:[250,154,96],backgroundColor:['#185FA5','#378ADD','#B5D4F4'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+Chart.defaults.font.family = "'DM Sans', system-ui, sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = INK_MUTED;
 
-new Chart(document.getElementById('pieRisk'),{type:'pie',data:{labels:['Upside-only','Downside risk'],datasets:[{data:[299,201],backgroundColor:['#3B6D11','#E24B4A'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
-
-new Chart(document.getElementById('segBar'),{type:'bar',data:{labels:['Small','Medium','Large','Downside risk','Upside-only'],datasets:[{label:'Churn rate (%)',data:[70,60,52,74.5,57.9],backgroundColor:'#E24B4A',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'},grid:{color:gridColor}},x:{grid:{display:false}}}}});
-
-// ROC curve approximation
-function makeROC(auc){
-  const pts=[[0,0]];
-  for(let i=1;i<=99;i++){
-    const fpr=i/100;
-    const tpr=Math.min(1,Math.pow(fpr,1/(3*auc-1.5)));
-    pts.push([fpr,tpr]);
+const rocCtx = document.getElementById('rocChart').getContext('2d');
+const fpr = [0,0.01,0.02,0.03,0.05,0.07,0.10,0.15,0.20,0.30,0.50,0.70,1.0];
+const tpr = [0,0.62,0.75,0.81,0.875,0.93,0.95,0.97,0.98,0.99,1.0,1.0,1.0];
+new Chart(rocCtx, {
+  type: 'line',
+  data: {
+    labels: fpr,
+    datasets: [
+      {
+        label: 'Random Forest (AUC = 0.979)',
+        data: tpr,
+        borderColor: GREEN,
+        backgroundColor: 'rgba(29,158,117,0.08)',
+        fill: true,
+        tension: 0.3,
+        borderWidth: 2.5,
+        pointRadius: 0,
+      },
+      {
+        label: 'Random classifier',
+        data: fpr,
+        borderColor: BORDER,
+        borderDash: [5,4],
+        fill: false,
+        tension: 0,
+        borderWidth: 1.5,
+        pointRadius: 0,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'False positive rate', color: INK_MUTED, font: { size: 11 } },
+        ticks: { maxTicksLimit: 6, callback: v => Number(fpr[v]).toFixed(1) },
+        grid: { color: BORDER }
+      },
+      y: {
+        title: { display: true, text: 'True positive rate', color: INK_MUTED, font: { size: 11 } },
+        min: 0, max: 1,
+        ticks: { maxTicksLimit: 5 },
+        grid: { color: BORDER }
+      }
+    }
   }
-  pts.push([1,1]);
-  return pts;
-}
-const roc1=makeROC(0.905),roc2=makeROC(0.893),roc3=makeROC(0.891);
-new Chart(document.getElementById('rocChart'),{type:'scatter',data:{datasets:[
-  {label:'Logistic Regression (AUC=0.905)',data:roc1.map(p=>({x:p[0],y:p[1]})),showLine:true,borderColor:'#185FA5',backgroundColor:'transparent',pointRadius:0,borderWidth:2},
-  {label:'Gradient Boosting (AUC=0.893)',data:roc2.map(p=>({x:p[0],y:p[1]})),showLine:true,borderColor:'#3B6D11',backgroundColor:'transparent',pointRadius:0,borderWidth:2,borderDash:[6,3]},
-  {label:'Random Forest (AUC=0.891)',data:roc3.map(p=>({x:p[0],y:p[1]})),showLine:true,borderColor:'#BA7517',backgroundColor:'transparent',pointRadius:0,borderWidth:2,borderDash:[3,3]},
-  {label:'Random chance',data:[{x:0,y:0},{x:1,y:1}],showLine:true,borderColor:isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)',backgroundColor:'transparent',pointRadius:0,borderWidth:1,borderDash:[4,4]}
-]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:16,font:{size:12}}}},scales:{x:{min:0,max:1,title:{display:true,text:'False Positive Rate'},grid:{color:gridColor}},y:{min:0,max:1,title:{display:true,text:'True Positive Rate'},grid:{color:gridColor}}}}});
+});
 
-new Chart(document.getElementById('scenarioBar'),{type:'bar',data:{labels:['Benchmark +2%','Boost savings +20%','Eliminate downside risk'],datasets:[{label:'Change in churn rate (pp)',data:[-19.55,-5.30,4.15],backgroundColor:['#3B6D11','#185FA5','#E24B4A'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>(v>0?'+':'')+v+'pp'},grid:{color:gridColor}},x:{grid:{display:false}}}}});
+const distCtx = document.getElementById('distChart').getContext('2d');
+const bins = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0];
+const activeData = [310,190,120,100,70,50,30,20,10,20];
+const churnData  = [2,  3,  4,  5,  6,  8, 10,12,15,15];
+new Chart(distCtx, {
+  type: 'bar',
+  data: {
+    labels: bins.slice(0,-1).map((b,i) => b.toFixed(1)),
+    datasets: [
+      {
+        label: 'Active patients',
+        data: activeData,
+        backgroundColor: 'rgba(29,158,117,0.5)',
+        borderColor: GREEN,
+        borderWidth: 1,
+      },
+      {
+        label: 'Churned patients',
+        data: churnData,
+        backgroundColor: 'rgba(192,57,43,0.55)',
+        borderColor: RED,
+        borderWidth: 1,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        align: 'start',
+        labels: { boxWidth: 10, boxHeight: 10, borderRadius: 2, padding: 16, font: { size: 12 } }
+      },
+      tooltip: { mode: 'index', intersect: false }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'Churn risk score', color: INK_MUTED, font: { size: 11 } },
+        grid: { display: false }
+      },
+      y: {
+        title: { display: true, text: 'Patients', color: INK_MUTED, font: { size: 11 } },
+        grid: { color: BORDER }
+      }
+    }
+  }
+});
+
+const tierCtx = document.getElementById('tierChart').getContext('2d');
+new Chart(tierCtx, {
+  type: 'bar',
+  data: {
+    labels: ['Low risk', 'Medium risk', 'High risk'],
+    datasets: [
+      {
+        label: 'Total patients',
+        data: [911, 7, 74],
+        backgroundColor: ['rgba(29,158,117,0.2)','rgba(186,117,23,0.2)','rgba(192,57,43,0.2)'],
+        borderColor: [GREEN, AMBER, RED],
+        borderWidth: 1.5,
+      },
+      {
+        label: 'Actually churned',
+        data: [2, 5, 73],
+        backgroundColor: [GREEN, AMBER, RED],
+        borderColor: [GREEN, AMBER, RED],
+        borderWidth: 0,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        align: 'start',
+        labels: { boxWidth: 10, boxHeight: 10, borderRadius: 2, padding: 16, font: { size: 12 } }
+      }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+        title: { display: true, text: 'Patients', color: INK_MUTED, font: { size: 11 } },
+        grid: { color: BORDER }
+      }
+    }
+  }
+});
 </script>
 </body>
 </html>
